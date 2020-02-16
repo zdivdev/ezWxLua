@@ -36,20 +36,20 @@ __ctrl_event = {
     Choice = {
         ctor = function(parent,id,layoutCtrl)
                 if not layoutCtrl.items then layoutCtrl.items = {} end
-                ctrl = wx.wxChoice( parent, id,
+                    local ctrl = wx.wxChoice( parent, id,
                         wx.wxDefaultPosition,wx.wxDefaultSize,
                         layoutCtrl.items, 0, wx.wxDefaultValidator)
-                    if layoutCtrl.value then
-                        ctrl:SetSelection(layoutCtrl.value)
-                    end
-                return ctrl end,
+                        if layoutCtrl.value then
+                            ctrl:SetSelection(layoutCtrl.value)
+                        end
+                    return ctrl end,
         ev = wx.wxEVT_COMMAND_CHOICE_SELECTED
     },
     ComboBox = {
         ctor = function(parent,id,layoutCtrl)
             if not layoutCtrl.items then layoutCtrl.items = {} end
             if not layoutCtrl.value then layoutCtrl.value = "" end
-            ctrl = wx.wxComboBox( parent, id, layoutCtrl.value,
+                local ctrl = wx.wxComboBox( parent, id, layoutCtrl.value,
                     wx.wxDefaultPosition,wx.wxDefaultSize,
                     layoutCtrl.items, 0, wx.wxDefaultValidator)
                 return ctrl end,
@@ -57,8 +57,8 @@ __ctrl_event = {
     },
     ListBox = {
         ctor = function(parent,id,layoutCtrl)
-            if not layoutCtrl.items then layoutCtrl.items = {} end
-            ctrl = wx.wxListBox( parent, id, 
+                if not layoutCtrl.items then layoutCtrl.items = {} end
+                local ctrl = wx.wxListBox( parent, id, 
                     wx.wxDefaultPosition,wx.wxDefaultSize,
                     layoutCtrl.items, 0, wx.wxDefaultValidator)
                 return ctrl end,
@@ -66,8 +66,8 @@ __ctrl_event = {
     },    
     CheckListBox = {
         ctor = function(parent,id,layoutCtrl)
-            if not layoutCtrl.items then layoutCtrl.items = {} end
-            ctrl = wx.wxCheckListBox( parent, id, 
+                if not layoutCtrl.items then layoutCtrl.items = {} end
+                local ctrl = wx.wxCheckListBox( parent, id, 
                     wx.wxDefaultPosition,wx.wxDefaultSize,
                     layoutCtrl.items, 0, wx.wxDefaultValidator)
                 return ctrl end,
@@ -76,7 +76,7 @@ __ctrl_event = {
     RadioBox = {
         ctor = function(parent,id,layoutCtrl)
                 if not layoutCtrl.items then layoutCtrl.items = {} end
-                ctrl = wx.wxRadioBox( parent, id, layoutCtrl.label, 
+                    local ctrl = wx.wxRadioBox( parent, id, layoutCtrl.label, 
                         wx.wxDefaultPosition,wx.wxDefaultSize,
                         layoutCtrl.items, 0, wx.wxRA_SPECIFY_ROWS, wx.wxDefaultValidator)
                     if layoutCtrl.value then
@@ -84,19 +84,38 @@ __ctrl_event = {
                     end
                 return ctrl end,
         ev = wx.wxEVT_COMMAND_RADIOBOX_SELECTED
-    },       
---[[
-    if layoutCtrl.check then
-        newCtrl.ctrl = wx.wxCheckListBox( parent, wxID_USER_Index, 
-                        wx.wxDefaultPosition, wx.wxDefaultSize, 
-                        items, 0, wx.wxDefaultValidator)
-        newCtrl.IsChecked = function(index) return newCtrl.ctrl:IsChecked(index) end
-    else
-        newCtrl.ctrl = wx.wxListBox( parent, wxID_USER_Index, 
-                        wx.wxDefaultPosition, wx.wxDefaultSize, 
-                        items, 0, wx.wxDefaultValidator)
-    end
-    ]]   
+    },
+     
+    TextCtrl = {
+        ctor = function(parent,id,layoutCtrl)
+                    local style = 0 
+                    if layoutCtrl.multiline then
+                        style = style + wx.wxTE_MULTILINE + wx.wxTE_DONTWRAP
+                    else
+                        style = style + wx.wxTE_PROCESS_ENTER
+                    end
+                    local ctrl = wx.wxTextCtrl( parent, id, layoutCtrl.label,
+                        wx.wxDefaultPosition,wx.wxDefaultSize, style)
+                return ctrl end,
+    },    
+    FilePicker = {        
+        ctor = function(parent,id,layoutCtrl)
+                    local message = "File Open"
+                    local style = wx.wxFLP_DEFAULT_STYLE + wx.wxFLP_OPEN
+                    if layoutCtrl.save then
+                        style = wx.wxFLP_DEFAULT_STYLE + wx.wxFLP_SAVE + wx.wxFLP_OVERWRITE_PROMPT
+                    end
+                    return wx.wxFilePickerCtrl( parent, id, layoutCtrl.label, message, "*.*",
+                        wx.wxDefaultPosition,wx.wxDefaultSize, style)
+                end
+    },
+    DirPicker = {        
+        ctor = function(parent,id,layoutCtrl)
+                    local message = "Directory Open"
+                    return wx.wxDirPickerCtrl( parent, id, layoutCtrl.label, message,
+                        wx.wxDefaultPosition,wx.wxDefaultSize)
+                end
+    },     
 }
 
 function dump_ctrl_event()
@@ -116,7 +135,7 @@ function CreateControl(parent,layoutCtrl)
         wxID_USER_Index = wxID_USER_Index + 1
 
         newCtrl.ctrl = __ctrl_event[layoutCtrl.name].ctor(parent, newCtrl.id, layoutCtrl)
- 
+
         if layoutCtrl.handler and __ctrl_event[layoutCtrl.name].ev then
             parent:Connect(newCtrl.id, __ctrl_event[layoutCtrl.name].ev, layoutCtrl.handler )
         end
@@ -131,6 +150,14 @@ function CreateControl(parent,layoutCtrl)
                     newCtrl.ctrl:PopupMenu( menu, event:GetPosition() )
                 end ) 
         end
+        
+        if layoutCtrl.filedrop then
+            local dropTarget = wx.wxLuaFileDropTarget();
+            dropTarget.OnDropFiles = function(self, x, y, filenames)
+                return layoutCtrl.filedrop(filenames) -- 1..n, true, false
+            end
+            newCtrl.ctrl:SetDropTarget(dropTarget)
+        end
 
         newCtrl.proportion = 0 
         newCtrl.expand = true 
@@ -141,6 +168,12 @@ function CreateControl(parent,layoutCtrl)
             if layoutCtrl.layout.border then newCtrl.border = layoutCtrl.layout.border end
         end
 
+        if layoutCtrl.name == "CheckBox" then
+            newCtrl.GetValue  = function()  return newCtrl.ctrl:IsChecked() end
+            newCtrl.SetValue  = function(v) return newCtrl.ctrl:SetValue(v) end
+            newCtrl.IsChecked = function()  return newCtrl.ctrl:IsChecked() end        
+        end
+        
         if layoutCtrl.name == "Choice" or layoutCtrl.name == "ComboBox" or
             layoutCtrl.name == "ListBox" or layoutCtrl.name == "CheckListBox" or
             layoutCtrl.name == "RadioBox" 
@@ -150,47 +183,41 @@ function CreateControl(parent,layoutCtrl)
             newCtrl.Insert = function(value,index) return newCtrl.ctrl:Insert(value,index) end
             newCtrl.Delete = function(index) return newCtrl.ctrl:Delete(index) end
             newCtrl.Select = function(index) return newCtrl.ctrl:Select(index) end
-            newCtrl.GetCount  = function() return newCtrl.ctrl:GetCount() end
+            newCtrl.GetCount      = function() return newCtrl.ctrl:GetCount() end
             newCtrl.GetSelection  = function() return newCtrl.ctrl:GetSelection() end
-            newCtrl.GetString = function(index) return newCtrl.ctrl:GetString(index) end
+            newCtrl.GetString     = function(index) return newCtrl.ctrl:GetString(index) end
             if layoutCtrl.name == "Choice" or layoutCtrl.name == "RadioBox" then
                 newCtrl.GetValue = function() return newCtrl.ctrl:GetSelection() end
+                newCtrl.SetValue = function(v) return newCtrl.ctrl:SetValue(v) end
                 newCtrl.GetText  = function() return newCtrl.ctrl:GetString(newCtrl.ctrl:GetSelection()) end
             end
             if layoutCtrl.name == "ComboBox" then
-                newCtrl.GetValue = function() return newCtrl.ctrl:GetValue() end
-                newCtrl.GetText  = function() return newCtrl.ctrl:GetValue() end
-            end
-            if layoutCtrl.name == "ComboBox" then
-                newCtrl.GetValue = function() return newCtrl.ctrl:GetValue() end
-                newCtrl.GetText  = function() return newCtrl.ctrl:GetValue() end
+                newCtrl.GetValue = function()  return newCtrl.ctrl:GetValue() end
+                newCtrl.SetValue = function(v) return newCtrl.ctrl:SetValue(v) end
+                newCtrl.GetText  = function()  return newCtrl.ctrl:GetValue() end
             end
             if layoutCtrl.name == "ListBox" then
                 newCtrl.IsSelected = function(i) return newCtrl.ctrl:IsSelected(i) end
             end
             if layoutCtrl.name == "CheckListBox" then
                 newCtrl.IsSelected = function(i) return newCtrl.ctrl:IsSelected(i) end
-                newCtrl.IsChecked = function(i) return newCtrl.ctrl:IsChecked(i) end
+                newCtrl.IsChecked  = function(i) return newCtrl.ctrl:IsChecked(i) end
             end
         end
+
+        if layoutCtrl.name == "TextCtrl" then
+            newCtrl.Clear   = function() newCtrl.ctrl:Clear() end
+            newCtrl.Append = function(data) newCtrl.ctrl:AppendText(data) end       
+            newCtrl.AppendText = function(data) newCtrl.ctrl:AppendText(data) end
+            newCtrl.GetValue = function()  return newCtrl.ctrl:GetValue() end
+            newCtrl.SetValue = function(v)
+                newCtrl.ctrl:Clear()
+                newCtrl.ctrl:AppendText(v)
+            end
+        end        
     end
     return newCtrl
 end
-
---[[
-%wxEventType wxEVT_COMMAND_SPINCTRL_UPDATED // EVT_SPINCTRL(id, fn );
-%wxEventType wxEVT_COMMAND_SLIDER_UPDATED // EVT_SLIDER(winid, func );
-%wxEventType wxEVT_COMMAND_RADIOBUTTON_SELECTED // EVT_RADIOBUTTON(winid, func );
-%wxEventType wxEVT_COMMAND_RADIOBOX_SELECTED // EVT_RADIOBOX(winid, func );
-%wxEventType wxEVT_COMMAND_CHECKLISTBOX_TOGGLED // EVT_CHECKLISTBOX(winid, func );
-%wxEventType wxEVT_COMMAND_LISTBOX_DOUBLECLICKED // EVT_LISTBOX_DCLICK(winid, func );
-%wxEventType wxEVT_COMMAND_LISTBOX_SELECTED // EVT_LISTBOX(winid, func );
-%wxEventType wxEVT_COMMAND_COMBOBOX_SELECTED // EVT_COMBOBOX(winid, func );
-%wxEventType wxEVT_COMMAND_CHOICE_SELECTED // EVT_CHOICE(winid, func );
-%wxEventType wxEVT_COMMAND_CHECKBOX_CLICKED // EVT_CHECKBOX(winid, func );
-%wxEventType  // EVT_BUTTON(winid, func );
-%wxchkver_2_4 %wxEventType wxEVT_COMMAND_TOGGLEBUTTON_CLICKED // EVT_TOGGLEBUTTON(id, fn );         
-]]
 
 -------------------------------------------------------------------------------
 -- Resource
@@ -420,101 +447,6 @@ function InitItemContainer(newCtrl)
     newCtrl.GetString = function(index) return newCtrl.ctrl:GetString(index) end
 end
 
-function StaticText(parent,layoutCtrl)
-    local newCtrl = {}
-    newCtrl.ctrl = wx.wxStaticText( parent, wx.wxID_ANY, layoutCtrl.label,
-                    wx.wxDefaultPosition, wx.wxDefaultSize) --wx.wxSize(-1,50)
-    newCtrl.proportion = 0
-    newCtrl.expand = false
-    newCtrl.border = 1
-    return newCtrl
-end
-
-function StaticBitmap(parent,layoutCtrl) --TODO: Te be tested
-    local newCtrl = {}
-    local flag = wx.wxALIGN_CENTER
-    local bitmap = wx.Bitmap( layoutCtrl.image, wx.BITMAP_TYPE_ANY )
-    newCtrl.ctrl = wx.wxStaticText( parent, wx.wxID_ANY, bitmap,
-                    wx.wxDefaultPosition, wx.wxDefaultSize, flag) --wx.wxSize(-1,50)
-    newCtrl.ctrl.Connect( wx.EVT_SIZE, function(layoutCtrl,event) event:Skip() end )
-    newCtrl.proportion = 0
-    newCtrl.expand = false
-    newCtrl.border = 1
-    return newCtrl
-end
-
-function ToggleButton(parent,layoutCtrl)
-    local newCtrl = {}
-    newCtrl.ctrl = wx.wxToggleButton( parent, wxID_USER_Index, layoutCtrl.label,
-                    wx.wxDefaultPosition, wx.wxDefaultSize)
-    newCtrl.id = wxID_USER_Index
-    wxID_USER_Index = wxID_USER_Index + 1
-    InitCtrl(newCtrl,layoutCtrl)    
-    if layoutCtrl.handler ~= nil then
-        parent:Connect(newCtrl.id, wx.wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, layoutCtrl.handler )
-    end
-    newCtrl.SetValue = function(v) newCtrl.ctrl:SetValue(v) end
-    newCtrl.GetValue = function() return newCtrl.ctrl:GetValue() end
-    return newCtrl
-end
-
-function CheckBox(parent,layoutCtrl)
-    local newCtrl = {}
-    newCtrl.ctrl = wx.wxCheckBox( parent, wxID_USER_Index, layoutCtrl.label,
-                    wx.wxDefaultPosition, wx.wxDefaultSize)
-    newCtrl.id = wxID_USER_Index
-    wxID_USER_Index = wxID_USER_Index + 1
-    InitCtrl(newCtrl,layoutCtrl)    
-    if layoutCtrl.handler ~= nil then
-        parent:Connect(newCtrl.id, wx.wxEVT_COMMAND_CHECKBOX_CLICKED, layoutCtrl.handler )
-    end
-    return newCtrl
-end
-
-function BitmapButton(parent,layoutCtrl) --TODO: To be tested
-    local newCtrl = {}
-    newCtrl.ctrl = wx.wxBitmapButton( parent, wxID_USER_Index, layoutCtrl.image,
-                    wx.wxDefaultPosition, wx.wxDefaultSize)
-    wxID_USER_Index = wxID_USER_Index + 1
-    InitCtrl(button,layoutCtrl) 
-    return newCtrl 
-end
-
-function TextCtrl(parent,layoutCtrl)
-    local text = {}
-    text.ctrl = wx.wxTextCtrl(parent, wxID_USER_Index, layoutCtrl.text,
-                    wx.wxDefaultPosition, wx.wxDefaultSize,
-                    wx.wxTE_PROCESS_ENTER ) 
-    text.id = wxID_USER_Index
-    wxID_USER_Index = wxID_USER_Index + 1
-    InitCtrl(text,layoutCtrl) 
- 
-    local dropTarget = wx.wxLuaFileDropTarget();
-    dropTarget.OnDropFiles = function(self, x, y, filenames)
-        text.ctrl:Clear()
-        for i = 1, #filenames do
-            if i >= 2 then text.ctrl:AppendText(';') end
-            text.ctrl:AppendText(filenames[i])    
-        end
-        return true
-    end
-    text.ctrl:SetDropTarget(dropTarget)
-    text.Clear = function() text.ctrl:Clear() end
-    text.AppendText = function(data) text.ctrl:AppendText(data) end 
-    return text 
-end
-
-function MLTextCtrl(parent,layoutCtrl)
-    local text = {}
-    text.ctrl = wx.wxTextCtrl(parent, wxID_USER_Index, layoutCtrl.data,
-                wx.wxDefaultPosition, wx.wxDefaultSize,
-                wx.wxTE_MULTILINE+wx.wxTE_DONTWRAP) 
-    text.id = wxID_USER_Index
-    wxID_USER_Index = wxID_USER_Index + 1
-    InitCtrl(text,layoutCtrl)  
-    return text
-end
-
 function StyledText(parent,layoutCtrl)
     local stc = {}
     local style = 0
@@ -537,24 +469,6 @@ function StyledText(parent,layoutCtrl)
     stc.enableLineNumber();
     
     return stc
-end
-
-function FilePicker(parent,layoutCtrl)
-    local newCtrl = {}
-    local style = wx.wxFLP_DEFAULT_STYLE
-    if layoutCtrl.save then
-        style = style + wx.wxFLP_SAVE + wx.wxFLP_OVERWRITE_PROMPT
-    else
-        style = style + wx.wxFLP_OPEN
-    end
-
-    newCtrl.ctrl = wx.wxFilePickerCtrl( parent, wx.wxID_USER_Index,
-                    "", "Select a file", "*.*",
-                    wx.wxDefaultPosition, wx.wxDefaultSize, style )
-                   
-    newCtrl.id = wxID_USER_Index
-    wxID_USER_Index = wxID_USER_Index + 1 
-    InitCtrl(newCtrl,layoutCtrl)  
 end
 
 function ListCtrl(parent,layoutCtrl)
@@ -750,11 +664,12 @@ function Layout(parent,content)
                        h.name == "ComboBox" or
                        h.name == "ListBox" or
                        h.name == "CheckListBox" or
-                       h.name == "RadioBox" 
+                       h.name == "RadioBox" or
+                       h.name == "TextCtrl" or
+                       h.name == "FilePicker" or
+                       h.name == "DirPicker"
                     then
                         ctrl = CreateControl(parent,h)
-                    elseif h.name == "TextCtrl" then
-                        ctrl = TextCtrl(parent,h)
                     elseif h.name == "StyledText" then
                         ctrl = StyledText(parent,h)
                     elseif h.name == "ListCtrl" then
