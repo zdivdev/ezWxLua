@@ -1,6 +1,5 @@
 package.cpath = package.cpath..";./?.dll;./?.so;../lib/?.so;../lib/vc_dll/?.dll;../lib/bcc_dll/?.dll;../lib/mingw_dll/?.dll;"
 require("wx")
-ic = require("icon")
 require("ezwx")
 
 -------------------------------------------------------------------------------
@@ -203,13 +202,32 @@ function fnAbout()
 end
 
 function fnOpen() 
- local path = OpenFileDialog( appWin.frame )
- print(path)
- if path ~= nil then
-  appWin.ctrl.text.Clear()
-  appWin.ctrl.text.AppendText(path)
- end
+    local path = OpenFileDialog( appWin.frame )
+    print(path)
+    if path ~= nil then
+        appWin.ctrl.text.Clear()
+        appWin.ctrl.text.AppendText(path)
+    end
 end
+
+function fnToggle() 
+    local wxCtrl = GetWxCtrl('toggle')
+    if wxCtrl:GetValue() then
+        wxCtrl:SetLabel('On')
+    else
+        wxCtrl:SetLabel('Off')
+    end
+end
+
+function fnCheckBox() 
+    local wxCtrl = GetWxCtrl('checkbox')
+    if wxCtrl:GetValue() then
+        wxCtrl:SetLabel('CheckOn')
+    else
+        wxCtrl:SetLabel('CheckOff')
+    end
+end
+
 
 function fnStart() 
     appWin.StartTimer(0)
@@ -238,17 +256,43 @@ function fnComboBox()
 end
 
 function fnListBox()
-	local ctrl = GetCtrl('listbox')
-	local count = ctrl.GetCount()
-	local value = ""
-	for i = 1, count do
-		if ctrl.IsSelected(i-1) then
-			value = value .. " " .. ctrl.GetString(i-1)
-		end
-	end
+    local ctrl = GetCtrl('listbox')
+    local count = ctrl.GetCount()
+    local value = ""
+    for i = 1, count do
+        if ctrl.IsSelected(i-1) then
+            value = value .. " " .. ctrl.GetString(i-1)
+        end
+    end
     Message( appWin.frame, "About ListBox", value)
 end
 
+function fnListCtrl()
+    local ctrl = GetCtrl('list')
+    local items = ctrl.GetSelectedItems()
+    local value = ""
+    for i = 1, #items do
+        value = value .. " " .. items[i]
+    end
+    Message( appWin.frame, "About ListCtrl", value)
+end
+
+function fnCheckListBox()
+    local ctrl = GetCtrl('checklist')
+    local count = ctrl.GetCount()
+    local value = ""
+    for i = 1, count do
+        if ctrl.IsChecked(i-1) then
+            value = value .. " " .. ctrl.GetString(i-1)
+        end
+    end
+    Message( appWin.frame, "About ListBox", value)
+end
+
+function fnRadioBox()
+    local ctrl = GetCtrl('radiobox')
+    Message( appWin.frame, "About RadioBox", tostring(ctrl.GetSelection()) .. " " .. ctrl.GetText())
+end
 
 function main()
     local menu = { 
@@ -256,7 +300,7 @@ function main()
                 { Name = "Exit" , Value = fnExit, Icon='exit' } 
             }
         },
-        { Name = "도움말", Value = {
+        { Name = "Help", Value = {
                 { Name = "About", Value = fnAbout, Icon='help' }
             }
         } 
@@ -267,31 +311,44 @@ function main()
         { Name = nil, Value = fnAbout, Icon='help', ToolTip="About this Program" },
     }
     local main_layout = { proportion=1, expand=true, border=1 } 
+    local list_menu = {
+        { Name = "Exit" , Value = fnExit, Icon='exit' }
+    }
+    local listctrl_menu = {
+        { Name = "Show Selected Items" , Value = fnListCtrl }
+    }    
     local left = { -- vbox
-			{ -- hbox
-				{ name="ListCtrl", key="list", layout=main_layout },
-				{ proportion=1, expand=true }
-			},
+            { -- hbox
+                { name="ListCtrl", key="list", menu=listctrl_menu, layout=main_layout },
+                { proportion=1, expand=true }
+            },
             { proportion=1, expand=true }
         }
     local right = { --vbox
-			{ -- hbox
-				{ name="StyledText", key="stc", layout=main_layout },
-				{ proportion=1, expand=true }
-			},
+            { -- hbox
+                { name="StyledText", key="stc", layout=main_layout },
+                { proportion=1, expand=true }
+            },
             { proportion=1, expand=true }
         }
     local content = { -- vbox
         { -- hbox
-            { name="StaticText", data="  File  ", expand=true },
-            { name='Choice', key='choice', items={'apple','grape'}, value=1, handler=fnChoice },
-            { name='ComboBox', key='combobox', items={'apple','grape'}, value="apple", handler=fnComboBox },
-            { name="TextCtrl", key="text", data="Text", layout=main_layout },
-            { name="Button", data="Open", handler=fnOpen, expand=true  },
+            { name="StaticText", label="  File  ", expand=true },
+            { name="TextCtrl", key="text", text="Text", layout=main_layout },
+            { name="Button", label="Open", handler=fnOpen, expand=true  },
+            { name="ToggleButton", key='toggle', label="On", handler=fnToggle, expand=true  },
+            { name="CheckBox", key='checkbox', label="CheckOn", handler=fnCheckBox, expand=true  },
             { proportion=0, expand=true }
         },
         { -- hbox
-            { name='ListBox', key='listbox', items={'apple','grape'}, handler=fnListBox },
+            { name='Choice', key='choice', items={'apple','grape'}, value=1, handler=fnChoice },
+            { name='ComboBox', key='combobox', items={'apple','grape'}, value="apple", handler=fnComboBox },
+            { proportion=0, expand=true }
+        },        
+        { -- hbox
+            { name='ListBox', key='listbox', items={'apple','grape'}, menu=list_menu, handler=fnListBox },
+            { name='CheckListBox', key='checklist', items={'apple','grape'}, menu=list_menu, handler=fnCheckListBox },
+            { name='RadioBox', key='radiobox', label='RadioBox', items={'apple','grape'}, value=1, menu=list_menu, handler=fnRadioBox },
             { proportion=0, expand=true }
         },
         { -- hbox
@@ -300,7 +357,7 @@ function main()
         },
         { -- hbox
             { name="Spacer", expand=true },
-            { name="Button", data="Start", handler=fnStart, expand=true  },
+            { name="Button", label="Start", tooltip="Make dummy list data", handler=fnStart, expand=true  },
             { proportion=0, expand=true }
         },
     }
@@ -310,12 +367,12 @@ function main()
         statusbar = 2,
         content = content,
     }
+
     appWin = Window("ezWxLua",exit_xpm,layout,600,400)
     appWin.SetTimer(fnTimer)
-    appWin.ctrl.list.AddColumns( { "Time", "Diff" }, { 300, 300 } )
+    appWin.ctrl.list.AddColumns( { "Time", "Diff" }, { 150, 150 } )
     appWin.Show()
-	appWin.Run()
-    --wx.wxGetApp():MainLoop()
+    appWin.Run()
 end
 
 main()  
