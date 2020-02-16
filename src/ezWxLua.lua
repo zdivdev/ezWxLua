@@ -215,6 +215,10 @@ function CreateControl(parent,layoutCtrl)
                 newCtrl.ctrl:AppendText(v)
             end
         end        
+        if layoutCtrl.name == "FilePicker" or layoutCtrl.name == "DirPicker" then
+            newCtrl.GetValue = function()  return newCtrl.ctrl:GetPath() end
+            newCtrl.SetValue = function(v) return newCtrl.ctrl:SetPath(v) end       
+        end
     end
     return newCtrl
 end
@@ -467,6 +471,8 @@ function StyledText(parent,layoutCtrl)
     end
     
     stc.enableLineNumber();
+
+    stc.AppendText = function(v) stc.ctrl:AppendText(v) end
     
     return stc
 end
