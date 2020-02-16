@@ -299,6 +299,18 @@ function fnFileDrop(filenames)
     ctrl.SetValue(filenames[1]) 
 end
 
+function fnCopyFilePath()
+    local fpick = GetCtrl('filepick')
+    local stc = GetCtrl('stc')
+    stc.AppendText( fpick.GetValue() )
+end
+
+function fnCopyDirPath()
+    local fpick = GetCtrl('dirpick')
+    local stc = GetCtrl('stc')
+    stc.AppendText( fpick.GetValue() )
+end
+
 function main()
     local menu = { 
         { Name = "File", Value = {
@@ -348,11 +360,13 @@ function main()
         { -- hbox
             { name="StaticText", label="  File  ", expand=true },
             { name='FilePicker', key='filepick', label="C:\\a.txt", layout=main_layout },
+            { name="Button", label="Copy", handler=fnCopyFilePath, expand=true  },
             { proportion=0, expand=true }
         },        
         { -- hbox
             { name="StaticText", label="  Folder  ", expand=true },
             { name='DirPicker', key='dirpick', label="", layout=main_layout },
+            { name="Button", label="Copy", handler=fnCopyDirPath, expand=true  },
             { proportion=0, expand=true }
         },        
         { -- hbox
