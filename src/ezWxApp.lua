@@ -294,6 +294,11 @@ function fnRadioBox()
     Message( appWin.frame, "About RadioBox", tostring(ctrl.GetSelection()) .. " " .. ctrl.GetText())
 end
 
+function fnFileDrop(filenames)
+    local ctrl = GetCtrl('text')
+    ctrl.SetValue(filenames[1]) 
+end
+
 function main()
     local menu = { 
         { Name = "File", Value = {
@@ -334,12 +339,22 @@ function main()
     local content = { -- vbox
         { -- hbox
             { name="StaticText", label="  File  ", expand=true },
-            { name="TextCtrl", key="text", text="Text", layout=main_layout },
+            { name="TextCtrl", key="text", label="Text", layout=main_layout, filedrop=fnFileDrop },
             { name="Button", label="Open", handler=fnOpen, expand=true  },
             { name="ToggleButton", key='toggle', label="On", handler=fnToggle, expand=true  },
             { name="CheckBox", key='checkbox', label="CheckOn", handler=fnCheckBox, expand=true  },
             { proportion=0, expand=true }
         },
+        { -- hbox
+            { name="StaticText", label="  File  ", expand=true },
+            { name='FilePicker', key='filepick', label="C:\\a.txt", layout=main_layout },
+            { proportion=0, expand=true }
+        },        
+        { -- hbox
+            { name="StaticText", label="  Folder  ", expand=true },
+            { name='DirPicker', key='dirpick', label="", layout=main_layout },
+            { proportion=0, expand=true }
+        },        
         { -- hbox
             { name='Choice', key='choice', items={'apple','grape'}, value=1, handler=fnChoice },
             { name='ComboBox', key='combobox', items={'apple','grape'}, value="apple", handler=fnComboBox },
@@ -368,7 +383,7 @@ function main()
         content = content,
     }
 
-    appWin = Window("ezWxLua",exit_xpm,layout,600,400)
+    appWin = Window("ezWxLua",exit_xpm,layout,800,600)
     appWin.SetTimer(fnTimer)
     appWin.ctrl.list.AddColumns( { "Time", "Diff" }, { 150, 150 } )
     appWin.Show()
